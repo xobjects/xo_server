@@ -1,0 +1,16 @@
+version: "3"
+services:
+  xobjects-db:
+    image: postgis/postgis
+    ports:
+      - "90:5432"
+    environment:
+      KeyCloak_Host: https://auth-fms.exfo-skyran.com
+      KeyCloak_Realm: Fiber
+      fms_user: leek
+      fms_pass: gerald
+      client_id: fg-topologyui
+      client_secret: 493f468b-9ceb-4139-8910-89d7b178c58f
+      POSTGRES_PASSWORD: xodb$$
+    volumes:
+      - ./data:/var/lib/postgresql/data

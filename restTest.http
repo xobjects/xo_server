@@ -1,0 +1,127 @@
+@server = http://localhost:8080
+
+###
+GET {{server}}/xo/integrity
+
+
+###
+
+POST http://localhost:8080/xo/update_map
+Content-Type: application/json
+
+{"layer_id":1,"count":500,"bounds_xgeo":{"type":"Polygon","coordinates":[[[-16801923.100868735,-71898.17690792494],[-16801923.100868735,9794593.702198492],[-5054749.34059165,9794593.702198492],[-5054749.34059165,-71898.17690792494],[-16801923.100868735,-71898.17690792494]]],"crs":{"type":"name","properties":{"name":"EPSG:3857"}}},"xid_list":[]}
+###
+GET http://localhost:8080/xo/layerset/list
+
+###
+GET http://localhost:8080/xo/xschema
+###
+GET http://localhost:8080/xo/layer/list
+###
+POST http://localhost:8080/xo/xobject
+Content-Type: application/json
+
+{ 
+   "xObject":{ 
+      "xType":"polygon",
+      "xId":null,
+      "xGeo":{ 
+         "type":"Polygon",
+         "coordinates":[ 
+            [ 
+               [ -12302312.09001489, 6071149.942120592 ],
+               [ -12593346.075210698, 5664008.110959601 ],
+               [ -11923795.925946698, 5482470.168782307 ],
+               [ -12061650.106459014, 6136847.5679317005 ],
+               [ -12302312.09001489, 6071149.942120592 ]
+            ]
+         ],
+         "crs":{ "type":"name", "properties":{ "name":"EPSG:3857" } }
+      },
+	  "xLayer": "fl1"
+   }
+}
+
+/*
+hereapi.com
+
+api key: 4AxvLKySh6QYK4VMw5mFaeivkX8A7gRaMW0FNRODGDU
+api key: h8ySntxXQW6iu-d_3I2n7irs3wc7fh0rM165w1wLQBg
+
+access key id: IE8GnrBHnf2RrCyqJ1-hSQ
+access key secret: Dfk_W09WLTyh6EMrCPtfNUSRQUEJh4DbQ8P3uekTSHAtTwf6Zk9S0cOZn1Y-ppiKW4IZ2pLfKrEYqTVEpDf9Yg
+
+
+? Authorization: Bearer ASfo2Trpsj9u94smGBZVZ9jcwicmxh1YuMxfcQmxj_4iXnfEu3SKDOGhGm-Rk7vdPY6QJRG97Qe2YqoQnYBdoA
+*/
+
+@APIKEY=apikey=4AxvLKySh6QYK4VMw5mFaeivkX8A7gRaMW0FNRODGDU
+
+###
+POST https://account.api.here.com/oauth2/token
+
+### route request using apiKey
+GET https://router.hereapi.com/v8/routes?apikey=4AxvLKySh6QYK4VMw5mFaeivkX8A7gRaMW0FNRODGDU&transportMode=car&origin=52.5308,13.3847&destination=52.5264,13.3686&return=summary
+
+###
+GET https://router.hereapi.com/v8/routes?{{APIKEY}}&transportMode=car&return=polyline&origin=52.51375,13.42462&destination=52.52332,13.42800&via=52.52426,13.43000
+
+### route request using bearer token
+GET https://router.hereapi.com/v8/routes?transportMode=car&origin=52.5308,13.3847&destination=52.5264,13.3686&return=summary
+Authorization: Bearer Dfk_W09WLTyh6EMrCPtfNUSRQUEJh4DbQ8P3uekTSHAtTwf6Zk9S0cOZn1Y-ppiKW4IZ2pLfKrEYqTVEpDf9Yg
+
+###
+GET https://geocoder.ls.hereapi.com/6.2/geocode.json?apiKey=4AxvLKySh6QYK4VMw5mFaeivkX8A7gRaMW0FNRODGDU&searchtext=3077+South+Street,+Clinton,NY
+###
+
+GET https://route.ls.hereapi.com/routing/7.2/calculateroute.json?apiKey=4AxvLKySh6QYK4VMw5mFaeivkX8A7gRaMW0FNRODGDU&waypoint0=geo!52.2,13.4&Waypoint1=geo!52.5,13.45&mode=shortest;pedestrian
+
+###
+GET https://route.ls.hereapi.com/routing/7.2/calculateroute.json?waypoint0=geo!52.2,13.4&Waypoint1=geo!52.5,13.45&mode=shortest;pedestrian
+Authorization: Bearer ASfo2Trpsj9u94smGBZVZ9jcwicmxh1YuMxfcQmxj_4iXnfEu3SKDOGhGm-Rk7vdPY6QJRG97Qe2YqoQnYBdoA
+
+
+access key id: avu7tuiRYAT-j0iA424y1w
+access key secret: ASfo2Trpsj9u94smGBZVZ9jcwicmxh1YuMxfcQmxj_4iXnfEu3SKDOGhGm-Rk7vdPY6QJRG97Qe2YqoQnYBdoA
+
+###
+GET http://localhost:8080/xo/bookmark/list
+AAuthorization: Bearer gkelly
+
+###
+GET http://localhost:8080/xo/user/get_context
+Authorization: Bearer gkelly
+
+###
+GET http://localhost:8080/xo/user/get_context
+Authorization: Bearer gkelly
+
+###
+
+POST http://localhost:8080/xo/bookmark/list
+Content-Type: application/json
+
+{ 
+	"module": "bookmarks"
+	"cmd": "bookmarks"
+}
+
+###
+
+GET https://localhost:8080/geojson
+
+### xobjects keycloak
+###
+@keycloak_host=localhost:8080
+@keycloak_realm=XObjects_admin
+@user=admin
+@pass=admin
+@client_id=XObjects_admin_client
+@client_secret=6e1f4942-0e4f-458b-b024-b3de957fe549
+
+### Request access_token
+POST http://{{keycloak_host}}/auth/realms/{{keycloak_realm}}/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id={{client_id}}&username={{user}}&password={{pass}}&grant_type=password&client_secret={{client_secret}}
+

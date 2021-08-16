@@ -1,0 +1,47 @@
+https://letsencrypt.org/docs/certificates-for-localhost/
+https://certbot.eff.org/lets-encrypt/osx-other
+https://tosbourn.com/getting-os-x-to-trust-self-signed-ssl-certificates/
+
+### restart postgres
+
+ps auxwww postgres
+
+### start manually
+
+pg_ctl -D /usr/local/var/postgres start
+
+### stop manually
+
+pg_ctl -D /usr/local/var/postgres stop
+
+### start automatically
+
+brew services start postgresql
+
+### check if brew was package manager that installed postgres
+
+brew list | grep postgres
+
+### get brew info for postgres
+
+brew info postgres
+
+### status
+
+pg_ctl -D /usr/local/var/postgres status
+
+### check if tcp localhost connection are enabled 
+
+grep 127 /usr/local/var/postgres/pg_hba.conf
+
+### check listen address and port
+
+egrep 'listen|port' /usr/local/var/postgres/postgresql.conf
+
+### if not shutdown properly then remove pid file before starting
+
+rm /usr/local/var/postgres/postmaster.pid
+
+### server log
+
+/usr/local/var/postgres/server.log
