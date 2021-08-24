@@ -395,15 +395,20 @@ async function get_layers_async(p_ws_packet: ws_packet_type): Promise<ws_packet_
 	}
 }
 
+type get_layer_features_async_type = {
+	xid: number,
+	xid_list: number[]
+};
+
 async function get_layer_features_async(p_ws_packet: ws_packet_type): Promise<ws_packet_type> {
 
 	try {
-		const v_xid = p_ws_packet.data.xid;
+		const v_data = p_ws_packet.data as get_layer_features_async_type;
 
-		const v_layer_result = await db.query_async('select * from xo.layer where xid = $1', [v_xid]);
+		const v_layer_result = await db.query_async('select * from xo.layer where xid = $1', [v_data.xid]);
 		const v_layer = db.get_first_row<layer_row>(v_layer_result);
 
-		let v_md = await db.mapdata_2_async(v_layer.schema_name + '.' + v_layer.table_name, []);
+		let v_md = await db.mapdata_2_async(v_layer.schema_name + '.' + v_layer.table_name, v_data.xid_list);
 
 		//const v_result = await db.query_async('select * from xo.layer where layerset_id = $1 order by xname', [v_xid]);
 		return { ...p_ws_packet, successful: true, data: v_md };
