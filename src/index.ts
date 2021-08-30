@@ -176,6 +176,99 @@ class family_db extends db_base {
 	}
 }
 
+function xcite(p_template: string) {
+
+	const is_iterable = x => (typeof x?.[Symbol.iterator] === 'function') === true;
+
+	return function (p_data: any) {
+		return p_template.replace(/{{\s*([^{}\s]+)\s+(<?[^{}\s]+)\s*}}/g, (_, ...p_args: string[]) => {
+			const v_value1 = p_data[p_args[0].trim()];
+
+			let v_list_flag = false;
+			if (p_args[1][0] === '<') {
+				v_list_flag = true;
+				p_args[1] = p_args[1].substr(1);
+			}
+
+			const v_value2 = p_data[p_args[1].trim()];
+
+			if (typeof v_value1 === 'function') {
+				if (typeof v_value2 !== 'string' && is_iterable(v_value2)) {
+
+					if (v_list_flag) {
+						return v_value1(v_value2);
+					} else {
+						let v_s = '';
+						for (const v_item of v_value2) {
+							v_s += v_value1(v_item);
+						}
+						return v_s;
+					}
+				} else {
+					return v_value1(v_value2);
+				}
+
+			} else {
+				return '#error#';
+			}
+
+
+		}).replace(/{{([^{}]+)}}/g, (_, ...p_args: string[]) => {
+
+			const v_key = p_args[0].trim();
+
+			if (v_key === '-') {
+				return p_data;
+			}
+
+			const v_value = p_data[v_key];
+
+			if (typeof v_value === 'function') {
+				return v_value();
+			} else {
+				return v_value ?? '';
+			}
+		});
+	}
+}
+
+function xcite2_test() {
+
+	let v_template = xcite(' hello {{name}} and {{name}} <ul> {{ t1 list }} </ul> {{ fn }}\n{{ t2 list2 }} {{ fn2 <list2 }} {{ fn3 name }}');
+
+	let v_list = [];
+
+	for (let x = 0; x < 10; ++x) {
+		v_list.push('item ' + x);
+	}
+
+	console.log(v_template({
+		name: 'james',
+		t1: xcite('<li>{{-}}</li>'),
+		t2: xcite('<ZZ>{{first}} - {{last}}</ZZ>\n'),
+		list: v_list,
+		list2: [
+			{ first: 'james', last: 'kelly' },
+			{ first: 'samantha', last: 'kelly' },
+			{ first: 'g', last: 'kelly' },
+		],
+		fn: () => 'i like coffee',
+		fn2: p_arg => {
+
+			let v_s = '';
+
+			for (const v_item of p_arg) {
+				v_s += `#${v_item.first} - ${v_item.last}#\n`;
+			}
+
+			return v_s;
+		},
+
+		fn3: p_arg => 'goof ' + p_arg
+	}));
+
+}
+
 (async function () {
 
 	/*
@@ -183,6 +276,8 @@ class family_db extends db_base {
 	lines(v_path);
 	return;
 	*/
+
+	xcite2_test();
 
 	bcrypt_test_async();
 
@@ -267,16 +362,16 @@ class family_db extends db_base {
 	/*
 	v_app.use(async (p_req, p_res, p_done) => {
 		let v_auth = p_req.headers.authorization;
-
+	
 		if (v_auth) {
-
+	
 			var v_parts = v_auth.split(' ');
 			if (v_parts.length == 2 && v_parts[0] == 'Bearer') {
-
+	
 				p_req.headers.auth = 'zebra';
 			}
 		}
-
+	
 		if (!p_req.headers.auth) {
 			console.log('not authorized');
 			p_res.statusCode = 401;
@@ -285,7 +380,7 @@ class family_db extends db_base {
 		} else {
 			p_done();
 		}
-
+	
 	});
 	*/
 
