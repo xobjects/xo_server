@@ -20,10 +20,7 @@ export abstract class bookmark {
 	*/
 
 	static add_handlers() {
-
-
 		app_data.ws_server.add_handler('bookmark-set', bookmark.ws_bookmark_set_async);
-
 	}
 
 	static async get_bookmarks_async(p_req, p_res) {

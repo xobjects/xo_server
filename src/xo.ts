@@ -13,7 +13,6 @@ import { layerset } from './layerset';
 import { layer } from './layer';
 import { bookmark } from './bookmark';
 import { user } from './user';
-import { geocode } from './geocode';
 
 export abstract class xo {
 
@@ -80,25 +79,25 @@ function xo_async(p_req, p_res) {
 }
 
 /*
-        this.server.get('/*', this.get_static.bind(this));
-        this.server.get('/test', this.get_testAsync.bind(this));
-        this.server.post('/updatemap', this.updateMapAsync.bind(this));
+		this.server.get('/*', this.get_static.bind(this));
+		this.server.get('/test', this.get_testAsync.bind(this));
+		this.server.post('/updatemap', this.updateMapAsync.bind(this));
  
-        this.server.get('/xcompanylist', this.get_xCompanyListAsync.bind(this));
-        this.server.get('/xcompany/:field/:value/:type', this.get_xCompanyAsync.bind(this));
-        this.server.post('/xcompany', this.post_xCompanyAsync.bind(this));
+		this.server.get('/xcompanylist', this.get_xCompanyListAsync.bind(this));
+		this.server.get('/xcompany/:field/:value/:type', this.get_xCompanyAsync.bind(this));
+		this.server.post('/xcompany', this.post_xCompanyAsync.bind(this));
  
-        this.server.get('/xuserlist', this.get_xUserListAsync.bind(this));
-        this.server.post('/xuser', this.post_xUserAsync.bind(this));
+		this.server.get('/xuserlist', this.get_xUserListAsync.bind(this));
+		this.server.post('/xuser', this.post_xUserAsync.bind(this));
  
-        this.server.post('/xlayer', this.post_xLayerAsync.bind(this));
+		this.server.post('/xlayer', this.post_xLayerAsync.bind(this));
  
-        this.server.post('/xobject', this.post_xObject.bind(this));
+		this.server.post('/xobject', this.post_xObject.bind(this));
  
-        this.server.get('/xlayerlist', this.get_xLayerListAsync.bind(this));
-        this.server.get('/xschema', this.get_xSchema.bind(this));
+		this.server.get('/xlayerlist', this.get_xLayerListAsync.bind(this));
+		this.server.get('/xschema', this.get_xSchema.bind(this));
  
-        */
+		*/
 
 async function testAsync(p_req, p_res) {
 

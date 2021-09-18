@@ -1,10 +1,13 @@
 import { http_async } from './http';
-import { success, fail } from './utils';
+import { success, fail, delay_async } from './utils';
 import { decode as flexible_polyline_decode } from './flexible_polyline';
 import { Http2ServerRequest } from 'http2';
 import { featureCollection, FeatureCollection, Geometry } from '@turf/helpers';
 import pointGrid from '@turf/point-grid';
 import db from './db';
+import { ws_server } from './ws_server';
+import { app_data } from './app_data';
+import { ws_packet_type } from './types';
 
 /*
 here.com
@@ -21,6 +24,30 @@ apiKey=4AxvLKySh6QYK4VMw5mFaeivkX8A7gRaMW0FNRODGDU&waypoint0=geo!52.2,13.4&Waypo
 */
 const _openrouteservice_auth = '5b3ce3597851110001cf624827e9213ff2de4275a6a6152f7fb645f0';
 
+
+function add_handlers() {
+
+	app_data.ws_server.add_handler('geocode', ws_geocode_async);
+
+}
+
+async function ws_geocode_async(p_ws_packet: ws_packet_type): Promise<ws_packet_type> {
+
+	try {
+
+		const v_result = await geocode2_async(p_ws_packet.data.address);
+
+		return { ...p_ws_packet, successful: true, data: v_result };
+
+	} catch (p_error) {
+
+		return { ...p_ws_packet, successful: false, data: p_error.message ?? p_error ?? 'error' };
+
+	}
+
+}
+
+
 export async function geocode2_async(p_address: string): Promise<FeatureCollection> {
 
 	const v_url = `https://api.openrouteservice.org/geocode/search?api_key=${_openrouteservice_auth}&text=${encodeURI(p_address)}`;
@@ -36,7 +63,7 @@ export async function geocode2_async(p_address: string): Promise<FeatureCollecti
 	}
 }
 
-export abstract class geocode {
+abstract class geocode {
 
 	static apiKey: string = '4AxvLKySh6QYK4VMw5mFaeivkX8A7gRaMW0FNRODGDU';
 
@@ -90,4 +117,12 @@ export abstract class geocode {
 			console.log(p_error);
 		}
 	}
+}
+
+export default {
+
+	add_handlers,
+	geocode2_async,
+	geocode
+
 }
