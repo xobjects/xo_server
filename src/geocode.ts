@@ -1,6 +1,10 @@
 import { http_async } from './http';
 import { success, fail } from './utils';
 import { decode as flexible_polyline_decode } from './flexible_polyline';
+import { Http2ServerRequest } from 'http2';
+import { featureCollection, FeatureCollection, Geometry } from '@turf/helpers';
+import pointGrid from '@turf/point-grid';
+import db from './db';
 
 /*
 here.com
@@ -15,6 +19,22 @@ apiKey=4AxvLKySh6QYK4VMw5mFaeivkX8A7gRaMW0FNRODGDU&waypoint0=geo!52.2,13.4&Waypo
 
 
 */
+const _openrouteservice_auth = '5b3ce3597851110001cf624827e9213ff2de4275a6a6152f7fb645f0';
+
+export async function geocode2_async(p_address: string): Promise<FeatureCollection> {
+
+	const v_url = `https://api.openrouteservice.org/geocode/search?api_key=${_openrouteservice_auth}&text=${encodeURI(p_address)}`;
+	const v_response = await http_async<FeatureCollection>(v_url);
+
+	if (v_response.status === 200) {
+
+		for (const v_feature of v_response.data.features) {
+			v_feature.geometry = await db.transform_async(v_feature.geometry as Geometry, 4326, 3857);
+		}
+
+		return v_response.data;
+	}
+}
 
 export abstract class geocode {
 
@@ -25,6 +45,7 @@ export abstract class geocode {
 		console.log('geocode routes');
 
 		p_fastify.get('/geocode/geocode_address/:address', geocode.geocode_address_async);
+
 
 		p_done();
 	}
@@ -45,7 +66,10 @@ export abstract class geocode {
 		let v_url = `https://geocoder.ls.hereapi.com/6.2/geocode.json?apiKey=${geocode.apiKey}&searchtext=${encodeURIComponent(p_address)}`;
 
 		try {
-			let v_result = await http_async({ url: v_url, type: 'json' });
+			let v_response = await http_async({ url: v_url, in_type: 'json' });
+
+			let v_result = v_response.data;
+
 			let v_results = v_result.Response.View &&
 				v_result.Response.View.length > 0 &&
 				v_result.Response.View[0] &&

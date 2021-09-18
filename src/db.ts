@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto';
 
 import { Pool } from 'pg';
 import { db_base } from './db_base';
+import { Geometry } from '@turf/helpers';
 
 class db extends db_base {
 
@@ -224,6 +225,12 @@ class db extends db_base {
 
 	transaction_rollback_async(p_client) {
 		return this.query_first_async('rollback', null, p_client);
+	}
+
+	async transform_async(p_geo: Geometry, p_from: number = 4326, p_to: number = 3857): Promise<Geometry> {
+		const v_sql = `SELECT row_to_json(t) json from ( select ST_Transform(ST_SetSRID( ST_GeomFromGeoJSON($1::json)::geometry, $2::int ),$3::int) geo) t`;
+		const v_result = await this.query_async(v_sql, [p_geo, p_from, p_to]);
+		return v_result?.rows?.[0]?.json?.geo;
 	}
 
 }

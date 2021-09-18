@@ -21,7 +21,7 @@ import { user } from './user';
 
 import fastifyCors from 'fastify-cors';
 import db from './db';
-import { geocode } from './geocode';
+import { geocode, geocode2_async } from './geocode';
 import { db_base } from './db_base';
 import { Server } from 'http';
 
@@ -30,6 +30,7 @@ import { bcrypt_test_async } from './security';
 import { layer_row, ws_packet_type } from './types';
 
 import * as model from './oauth2_model';
+import { app_data } from './app_data';
 
 //import cacheControl from './cacheControl';
 
@@ -222,12 +223,7 @@ function xcite(p_template: string) {
 			}
 
 			const v_value = p_data[v_key];
-
-			if (typeof v_value === 'function') {
-				return v_value();
-			} else {
-				return v_value ?? '';
-			}
+			return typeof v_value === 'function' ? v_value() : v_value ?? '';
 		});
 	}
 }
@@ -271,6 +267,11 @@ function xcite2_test() {
 
 (async function () {
 
+	//let v_geocode = await geocode2_async('3077 South St, Clinton, NY, 13323');
+	let v_geocode = await geocode2_async('3077 south st, clinton, ny');
+
+	debugger;
+
 	/*
 	let v_path = '/Users/gkelly/dev/datasets/DistrictOfColumbia.geojson';
 	lines(v_path);
@@ -309,6 +310,8 @@ function xcite2_test() {
 	});
 
 	const v_ws_server = new ws_server(v_app.server);
+
+	app_data.ws_server = v_ws_server;
 
 	//v_app.decorateRequest('auth', {});
 
@@ -387,7 +390,6 @@ function xcite2_test() {
 	v_app.register(xo.routes, { prefix: '/xo' });
 	v_app.register(layer.routes, { prefix: '/xo' });
 	v_app.register(layerset.routes, { prefix: '/xo' });
-	v_app.register(bookmark.routes, { prefix: '/xo' });
 	v_app.register(user.routes, { prefix: '/xo' });
 	v_app.register(geocode.routes, { prefix: '/xo' });
 
@@ -443,6 +445,8 @@ function xcite2_test() {
 	v_ws_server.add_handler('get-layersets', get_layersets_async);
 	v_ws_server.add_handler('get-layers', get_layers_async);
 	v_ws_server.add_handler('get-layer-features', get_layer_features_async);
+
+	bookmark.add_handlers();
 
 	await v_app.listen(8081);
 

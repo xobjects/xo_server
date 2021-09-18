@@ -1,8 +1,11 @@
 import { success, fail } from './utils';
 import db from './db';
+import { app_data } from './app_data';
+import { ws_packet_type } from './types';
 
 export abstract class bookmark {
 
+	/*
 	static routes(p_fastify, p_options, p_done) {
 
 		console.log('bookmark routes');
@@ -13,6 +16,14 @@ export abstract class bookmark {
 		p_fastify.get('/bookmark/delete/:xid', bookmark.delete_bookmark_async);
 
 		p_done();
+	}
+	*/
+
+	static add_handlers() {
+
+
+		app_data.ws_server.add_handler('bookmark-set', bookmark.ws_bookmark_set_async);
+
 	}
 
 	static async get_bookmarks_async(p_req, p_res) {
@@ -27,6 +38,20 @@ export abstract class bookmark {
 		} catch (p_error) {
 			return fail(p_error.message);
 		}
+	}
+
+	static async ws_bookmark_set_async(p_ws_packet: ws_packet_type): Promise<ws_packet_type> {
+
+		try {
+
+			debugger;
+
+		} catch (p_error) {
+
+			return { ...p_ws_packet, successful: false, data: p_error.message ?? p_error ?? 'error' };
+
+		}
+
 	}
 
 	static async get_bookmark_async(p_req, p_res) {

@@ -80,7 +80,6 @@ GET https://route.ls.hereapi.com/routing/7.2/calculateroute.json?apiKey=4AxvLKyS
 GET https://route.ls.hereapi.com/routing/7.2/calculateroute.json?waypoint0=geo!52.2,13.4&Waypoint1=geo!52.5,13.45&mode=shortest;pedestrian
 Authorization: Bearer ASfo2Trpsj9u94smGBZVZ9jcwicmxh1YuMxfcQmxj_4iXnfEu3SKDOGhGm-Rk7vdPY6QJRG97Qe2YqoQnYBdoA
 
-
 access key id: avu7tuiRYAT-j0iA424y1w
 access key secret: ASfo2Trpsj9u94smGBZVZ9jcwicmxh1YuMxfcQmxj_4iXnfEu3SKDOGhGm-Rk7vdPY6QJRG97Qe2YqoQnYBdoA
 
@@ -125,3 +124,21 @@ Content-Type: application/x-www-form-urlencoded
 
 client_id={{client_id}}&username={{user}}&password={{pass}}&grant_type=password&client_secret={{client_secret}}
 
+
+
+
+###
+GET https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf624827e9213ff2de4275a6a6152f7fb645f0&start=8.681495,49.41461&end=8.687872,49.420318
+
+###
+GET https://api.openrouteservice.org/geocode/search?api_key=5b3ce3597851110001cf624827e9213ff2de4275a6a6152f7fb645f0&text=3077%20South%20St,%20clinton,%20ny,%2013323&layers=address
+
+###
+GET https://api.openrouteservice.org/geocode/search?api_key=5b3ce3597851110001cf624827e9213ff2de4275a6a6152f7fb645f0&text=100%20Main%20St&layers=address
+
+###
+POST https://api.openrouteservice.org/pois
+Authorization: 5b3ce3597851110001cf624827e9213ff2de4275a6a6152f7fb645f0 
+Content-Type: application/json
+
+{"request":"pois","geometry":{"bbox":[[8.8034,53.0756],[8.7834,53.0456]],"geojson":{"type":"Point","coordinates":[8.8034,53.0756]},"buffer":200}}

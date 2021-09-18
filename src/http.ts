@@ -4,58 +4,53 @@ type headers_type = {
 	[name: string]: string;
 }
 
-export async function http_async(p_config: any) {
+export interface http_config {
+	url: string,
+	in_type?: 'json' | 'text',
+	out_type?: 'json' | 'text',
+	data_in?: any,
+	method?: 'get' | 'post' | 'put' | 'patch' | 'delete',
+	auth?: string
+}
+
+export async function http_async<T = any>(p_config: http_config | string) {
 
 	try {
+		p_config = typeof p_config === 'string' ? { url: p_config } : p_config;
+		const v_in_type = p_config.in_type ?? 'json';
+		let v_data_in = p_config.data_in ?? undefined;
+		const v_out_type = p_config.out_type ?? 'json';
+		const v_method = p_config.method ?? (v_data_in ? 'post' : 'get');
+		const v_auth = p_config.auth ?? undefined;
+
 		//        utils.progressUp(p_config.url);
 
-		let v_method = 'GET';
 		let v_body;
 		let v_headers: headers_type = {};
 
-		if (typeof p_config.security !== 'undefined') {
-			v_headers["Authorization"] = 'Bearer ' + p_config.security.token.access_token;
+		if (v_auth) {
+			v_headers["Authorization"] = 'Bearer ' + v_auth;
 		}
 
-		if (p_config.dataIn) {
-			v_method = 'POST';
+		if (v_data_in && v_in_type === 'json') {
 			v_headers['Content-Type'] = 'application/json';
-			v_body = JSON.stringify(p_config.dataIn);
+			v_data_in = JSON.stringify(v_data_in);
 		}
 
 		let v_response = await fetch(p_config.url, {
 			method: v_method,
 			headers: v_headers,
-			body: v_body
+			body: v_data_in
 		});
 
-		if (p_config.type === 'ws') {
-
-			let v_json = await v_response.json();
-
-			if (typeof v_json.msg === 'string') {
-				//log(v_json.msg);
-			}
-
-			if (v_json.successful) {
-				return v_json.data;
-			} else {
-				throw v_json.data || 'unknown error';
-			}
-
-		} else if (p_config.type === 'json') {
-
-			return v_response.json();
-
-		} else { // assume p_config.type === 'text'
-
-			return v_response.text();
-		}
-
-	} finally {
-		//       utils.progressDown(p_config.url);
+		const v_result = v_out_type === 'json' ? await v_response.json() : await v_response.text();
+		return { status: v_response.status as number, data: v_result as T };
 	}
 
+	catch (p_error) { }
+	finally { }
+
+	return;
 }
 
 
