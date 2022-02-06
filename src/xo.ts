@@ -1,37 +1,14 @@
-import fastify from 'fastify';
 
-import shortid from 'shortid';
+import short_uuid from 'short-uuid';
 import { v4 as uuid } from 'uuid';
 import db from './db';
 import logger from './logger';
-import { success, fail, valid_postgres_identifier } from './utils';
+import { success, fail } from './utils';
 
 import { validateAccessAsync as xAuth_validateAccessAsync } from './xAuth';
-import cacheControl from './cacheControl';
 
-import { layerset } from './layerset';
-import { layer } from './layer';
-import { bookmark } from './bookmark';
-import { user } from './user';
 
 export abstract class xo {
-
-	static routes(p_fastify, p_options, p_done) {
-		console.log('xo routes');
-
-		//p_fastify.register(layer.routes, { prefix: '/xo' });
-		//p_fastify.register(layerset.routes, { prefix: '/xo' });
-		//p_fastify.register(bookmark.routes, { prefix: '/xo' });
-		//p_fastify.register(user.routes, { prefix: '/xo' });
-		//p_fastify.register(geocode.routes, { prefix: '/xo' });
-
-		//p_fastify.get('/bookmark/list', bookmark.get_bookmarks_async);
-		//p_fastify.post('/bookmark/add', bookmark.add_bookmark_async);
-		//p_fastify.get('/bookmark/get/:xid', bookmark.get_bookmark_async);
-		//p_fastify.get('/bookmark/delete/:xid', bookmark.delete_bookmark_async);
-
-		p_done();
-	}
 
 }
 
@@ -101,13 +78,13 @@ function xo_async(p_req, p_res) {
 
 async function testAsync(p_req, p_res) {
 
-	let id = shortid.generate();
+	let id = short_uuid.generate();
 	console.log(id);
 	p_res.send('hello');
 
-	let v_user_id: string = '82dde3a8-024c-4437-aa48-a8bc95110e36';
+	let v_user_xid: string = '82dde3a8-024c-4437-aa48-a8bc95110e36';
 	try {
-		let v_tq = await db.get_default_user_layerset(v_user_id);
+		let v_tq = await db.get_default_user_layerset(v_user_xid);
 		console.log(v_tq);
 	} catch (p_error) {
 		console.log(p_error.message);
@@ -205,8 +182,8 @@ async function update_map_async(p_req, p_res) {
 
 		let v_bounds_xgeo = p_req.body.bounds_xgeo;
 
-		let v_layer = await db.simple_row_async('xo_admin.layer', 'xid', p_req.body.layer_id, 'int');
-		let v_layerset = await db.simple_row_async('xo_admin.layerset', 'xid', v_layer.layerset_id, 'int');
+		let v_layer = await db.simple_row_async('xo_admin.layer', 'xid', p_req.body.layer_xid, 'int');
+		let v_layerset = await db.simple_row_async('xo_admin.layerset', 'xid', v_layer.layerset_xid, 'int');
 
 		let v_fqn = v_layerset.schema + '.' + v_layer.table_name;
 		let v_fc = await db.mapdata_async(v_fqn, v_xid_list, v_bounds_xgeo);
@@ -236,13 +213,13 @@ async function xobject_async(p_req, p_res) {
 
 	try {
 		let v_xobject = p_req.body.xobject;
-		let v_layerset_id = p_req.body.layerset_id;
-		let v_layer_id = p_req.body.layer_id;
+		let v_layerset_xid = p_req.body.layerset_xid;
+		let v_layer_xid = p_req.body.layer_xid;
 
 		let v_xlayer = v_xobject.xlayer;
 
-		let v_layerset = await db.simple_row_async('xo_admin.layerset', 'xid', v_layerset_id, 'int');
-		let v_layer = await db.simple_row_async('xo_admin.layer', 'xid', v_layer_id, 'int');
+		let v_layerset = await db.simple_row_async('xo_admin.layerset', 'xid', v_layerset_xid, 'int');
+		let v_layer = await db.simple_row_async('xo_admin.layer', 'xid', v_layer_xid, 'int');
 
 		if (!v_layerset) {
 			// give error
@@ -351,7 +328,7 @@ async function xSchema(p_req, p_res) {
 async function integrity_async(p_req, p_res) {
 	let v_sql = `
 select ls.xname, l.table_name, t.schemaname, t.tablename from xo_admin.layerset ls
-inner join xo_admin.layer l on l.layerset_id = ls.xid
+inner join xo_admin.layer l on l.layerset_xid = ls.xid
 full outer join pg_tables t on t.schemaname = ls.xname and t.tablename = l.table_name
 where t.schemaname not in ( 'pg_catalog', 'information_schema', 'public', 'xo_admin' ) and
 (t.schemaname is null or ls.xname is null);`

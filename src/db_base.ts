@@ -1,3 +1,4 @@
+import { Decimal128 } from 'bson';
 import pg, { Pool } from 'pg';
 
 export class db_base {
@@ -5,6 +6,8 @@ export class db_base {
 	_pool: Pool;
 
 	constructor(p_database: string = 'postgres') {
+
+		//pg.types.setTypeParser(20, BigInt); // doesnt work with bson serializer, switch to using serial instead of bigserial
 
 		let v_this = this;
 
@@ -49,8 +52,8 @@ export class db_base {
 		return this._pool.connect();
 	}
 
-	async query_async(p_sql: string, p_params: any[] = null, p_client: pg.PoolClient = null) {
-		return (p_client || this._pool).query(p_sql, p_params);
+	async query_async<T = any>(p_sql: string, p_params: any[] = null, p_client: pg.PoolClient = null) {
+		return (p_client || this._pool).query<T>(p_sql, p_params);
 	}
 
 	async query2_async(p_sql: string, p_object?: any, p_client?: pg.PoolClient) {

@@ -5,18 +5,6 @@ import { auth_type } from '../@types/xobjects';
 
 export abstract class layerset {
 
-	static routes(p_fastify, p_options, p_done) {
-
-		console.log('layerset routes');
-
-		p_fastify.get('/layerset/list', layerset.get_layersets_async);
-		p_fastify.get('/layerset/get/:layerset_id', layerset.get_layerset_async);
-		p_fastify.get('/layerset/new_layerset/:layerset_name/:layerset_type', layerset.new_layerset_async);
-
-		p_done();
-
-	}
-
 	static async new_layerset_async(p_req, p_res) {
 
 		try {
@@ -39,10 +27,10 @@ export abstract class layerset {
 			let v_xuuid = await db.gen_uuid();
 
 			let v_result = await db.query_async(`insert into xo_admin.layerset 
-				(xtype, xname, schema, xuuid, user_id, dts_created, dts_updated) 
+				(xtype, xname, schema, xuuid, user_xid, dts_created, dts_updated) 
 				values ($1::text, $2::text, $2::text, $3::uuid, $4::uuid,
 					current_timestamp, current_timestamp) returning xid`,
-				[p_req.params.layerset_type, p_req.params.layerset_name, v_xuuid, p_req.auth.user_id], v_client);
+				[p_req.params.layerset_type, p_req.params.layerset_name, v_xuuid, p_req.auth.user_xid], v_client);
 
 			await db.transaction_commit_async(v_client);
 
@@ -56,8 +44,8 @@ export abstract class layerset {
 
 	static async get_layersets_raw_async(p_auth: auth_type) {
 
-		let v_result = await db.query_async(`select xid,xtype,xname,ST_AsGeoJSON(xgeo)::json as xgeo, schema, is_default, company_id, user_id, dts_created, dts_updated from xo_admin.layerset where user_id = $1`,
-			[p_auth.user_id]);
+		let v_result = await db.query_async(`select xid,xtype,xname,ST_AsGeoJSON(xgeo)::json as xgeo, schema, is_default, company_xid, user_xid, dts_created, dts_updated from xo_admin.layerset where user_xid = $1`,
+			[p_auth.user_xid]);
 
 		return db.get_rows(v_result);
 	}
@@ -76,15 +64,15 @@ export abstract class layerset {
 	static async get_layerset_async(p_req, p_res) {
 		try {
 
-			let v_layerset_id = p_req.params.layerset_id;
+			let v_layerset_xid = p_req.params.layerset_xid;
 
 			let v_result;
 
-			if (v_layerset_id === 'default') {
+			if (v_layerset_xid === 'default') {
 
 			} else {
-				v_result = await db.query_async(`select xid,xtype,xname,ST_AsGeoJSON(xgeo)::json as xgeo, schema, company_id, user_id, dts_created, dts_updated from xo_admin.layerset where user_id = $1`,
-					[p_req.auth.user_id]);
+				v_result = await db.query_async(`select xid,xtype,xname,ST_AsGeoJSON(xgeo)::json as xgeo, schema, company_xid, user_xid, dts_created, dts_updated from xo_admin.layerset where user_xid = $1`,
+					[p_req.auth.user_xid]);
 			}
 
 			let v_rows = db.get_rows(v_result);

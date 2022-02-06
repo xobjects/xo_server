@@ -1,4 +1,7 @@
+import { QueryResult } from 'pg';
 import { ws_result_type } from '../@types/xobjects';
+import db from './db';
+import { ws_packet_type } from './types';
 
 export function delay_async(p_ms): Promise<void> {
 	return new Promise<void>(p_resolve => setTimeout(() => p_resolve(), p_ms));
@@ -23,4 +26,22 @@ export function fail(p_data: any = null): ws_result_type {
 	}
 
 	return { successful: false, data: p_data };
+}
+
+export function safe_no_await(p_promise: Promise<any | void>) {
+
+	p_promise.catch(p_error => {
+		console.warn('promise exception');
+		console.warn(p_error);
+	});
+
+}
+
+export function ws_packet_return(p_ws_packet: ws_packet_type, p_successful: boolean, p_data?: any): ws_packet_type {
+
+	if (!p_successful) {
+		p_data = p_data?.message ?? p_data?.error?.message ?? p_data ?? 'error';
+	}
+
+	return { ...p_ws_packet, successful: p_successful, data: p_data };
 }

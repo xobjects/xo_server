@@ -2,7 +2,7 @@ import WebSocket from 'ws';
 import http from 'http';
 import * as bson from 'bson';
 import { v4 as uuid_v4 } from 'uuid';
-import { ws_packet_type } from './types';
+import { ws_context, ws_packet_type } from './types';
 
 type ws_pending_type = {
 	id: number,
@@ -16,7 +16,7 @@ export class ws_server {
 	wss: WebSocket.Server;
 	public http_server: http.Server;
 
-	ws_handlers: { [name: string]: (p_ws_packet: ws_packet_type, p_context: any) => Promise<ws_packet_type> };
+	ws_handlers: { [name: string]: (p_ws_packet: ws_packet_type, p_context: ws_context) => Promise<ws_packet_type> };
 
 	constructor(p_http_server?: http.Server) {
 
@@ -82,17 +82,13 @@ export class ws_server {
 		this.ws_handlers[p_name] = p_handler;
 	}
 
-	context_list: { [name: string]: any }[] = [];
-
 	on_connection(p_ws: WebSocket, p_req: http.IncomingMessage) {
 
-		const v_context = {
-			id: uuid_v4(),
-			authorized: false,
-			dts: new Date()
-		}
-
-		this.context_list[v_context.id] = v_context;
+		const v_ws_context: ws_context = {
+			session_id: uuid_v4(),
+			dts: new Date(),
+			authorized: false
+		};
 
 		p_ws.binaryType = 'arraybuffer';
 
@@ -104,8 +100,8 @@ export class ws_server {
 
 				const v_ws_packet = <ws_packet_type>bson.deserialize(p_message, { allowObjectSmallerThanBufferSize: true });
 
-				if (!v_context.authorized && v_ws_packet.action !== 'authorize') {
-					console.error(`${v_context.id} - not authorized`);
+				if (!v_ws_context.authorized && v_ws_packet.action !== 'authorize') {
+					console.error(`${v_ws_context.session_id} - not authorized`);
 					this.send_ws_packet(p_ws, { ...v_ws_packet, successful: false, data: 'not authorized' });
 					return;
 				}
@@ -115,7 +111,7 @@ export class ws_server {
 				const v_handler_async = this.ws_handlers[v_ws_packet.action];
 
 				if (v_handler_async) {
-					const v_ws_packet_response = await v_handler_async(v_ws_packet, v_context);
+					const v_ws_packet_response = await v_handler_async(v_ws_packet, v_ws_context);
 					this.send_ws_packet(p_ws, v_ws_packet_response);
 				} else {
 					console.error('unknown action: ' + v_ws_packet.action);
@@ -127,18 +123,16 @@ export class ws_server {
 
 			}
 
-			console.log(v_context);
+			console.log(v_ws_context);
 			console.log('received: ' + p_message);
 		});
-
-		const v_user_id = uuid_v4();
 
 		console.log('new connection');
 
 		const v_ws_packet: ws_packet_type = {
 			action: 'welcome',
 			data: {
-				user_id: v_user_id
+				user_xid: '...'
 			}
 		};
 

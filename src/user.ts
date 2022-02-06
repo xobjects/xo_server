@@ -1,38 +1,29 @@
 import { success, fail, valid_postgres_identifier } from './utils';
 import db from './db';
-import { ws_result_type, xobject_type } from '../@types/xobjects';
+import { ws_result_type, xobject } from '../@types/xobjects';
 import { layerset } from './layerset';
 import { ws_packet_type } from './types';
 
 type user_context_type = {
-	user_id: string,
-	default_layerset_id: number,
-	scratch_layer_id: number,
+	user_xid: string,
+	default_layerset_xid: number,
+	scratch_layer_xid: number,
 	layersets: any[]
 };
 
 export abstract class user {
-
-	static routes(p_fastify, p_options, p_done) {
-
-		console.log('user routes');
-
-		p_fastify.get('/user/get_context', user.get_context_async);
-
-		p_done();
-	}
 
 	static async get_user_context_async(p_ws_packet: ws_packet_type, p_context: any): Promise<ws_packet_type> {
 
 		try {
 
 			let v_auth: any = {};
-			//[p_req.auth.user_id]);
+			//[p_req.auth.user_xid]);
 
 			// load default layerset for user
 
-			let v_db_layerset = await db.query_first_async('select * from xo_admin.layerset where user_id = $1::uuid and is_default',
-				[v_auth.user_id]);
+			let v_db_layerset = await db.query_first_async('select * from xo_admin.layerset where user_xid = $1::uuid and is_default',
+				[v_auth.user_xid]);
 
 			if (!v_db_layerset) {
 				throw { message: 'no default layerset found' }
@@ -40,7 +31,7 @@ export abstract class user {
 
 			// make sure there is a scratch layer in the default layer set
 
-			let v_db_layer = await db.query_first_async("select *, xstyle from xo_admin.layer where layerset_id = $1::int and xtype = 'scr'", [v_db_layerset.xid]);
+			let v_db_layer = await db.query_first_async("select *, xstyle from xo_admin.layer where layerset_xid = $1::int and xtype = 'scr'", [v_db_layerset.xid]);
 
 			if (!v_db_layer) {
 				// create the scratch layer if necessary
@@ -55,7 +46,7 @@ export abstract class user {
 				}
 
 				// add entry in layer table
-				let v_result = await db.query_async('insert into xo_admin.layer (layerset_id,xtype,xname,table_name, dts_created, dts_updated) values ($1::int, $2, $3, $3, current_timestamp, current_timestamp) returning xid',
+				let v_result = await db.query_async('insert into xo_admin.layer (layerset_xid,xtype,xname,table_name, dts_created, dts_updated) values ($1::int, $2, $3, $3, current_timestamp, current_timestamp) returning xid',
 					[v_db_layerset.xid, 'scr', 'scratch'], v_client);
 
 				let v_db_row = db.get_first_row(v_result);
@@ -64,11 +55,11 @@ export abstract class user {
 
 				await db.transaction_commit_async(v_client);
 
-				v_db_layer = await db.query_first_async("select * from xo_admin.layer where layerset_id = $1::int and xtype = 'scr'", [v_db_layerset.xid]);
+				v_db_layer = await db.query_first_async("select * from xo_admin.layer where layerset_xid = $1::int and xtype = 'scr'", [v_db_layerset.xid]);
 			}
 
 			let v_db_layersets = await layerset.get_layersets_raw_async(v_auth);
-			let v_layersets: xobject_type[] = v_db_layersets.map(p_db_layerset => ({
+			let v_layersets: xobject[] = v_db_layersets.map(p_db_layerset => ({
 				xid: p_db_layerset.xid,
 				xtype: p_db_layerset.xtype,
 				xname: p_db_layerset.xname,
@@ -76,9 +67,9 @@ export abstract class user {
 			}));
 
 			let v_response: user_context_type = {
-				user_id: v_auth.user_id,
-				default_layerset_id: v_db_layerset.xid,
-				scratch_layer_id: v_db_layer.xid,
+				user_xid: v_auth.user_xid,
+				default_layerset_xid: v_db_layerset.xid,
+				scratch_layer_xid: v_db_layer.xid,
 				layersets: v_layersets
 			};
 
@@ -98,8 +89,8 @@ export abstract class user {
 		try {
 			// load default layerset for user
 
-			let v_db_layerset = await db.query_first_async('select * from xo_admin.layerset where user_id = $1::uuid and is_default',
-				[p_req.auth.user_id]);
+			let v_db_layerset = await db.query_first_async('select * from xo_admin.layerset where user_xid = $1::uuid and is_default',
+				[p_req.auth.user_xid]);
 
 			if (!v_db_layerset) {
 				throw { message: 'no default layerset found' }
@@ -107,7 +98,7 @@ export abstract class user {
 
 			// make sure there is a scratch layer in the default layer set
 
-			let v_db_layer = await db.query_first_async("select *, xstyle from xo_admin.layer where layerset_id = $1::int and xtype = 'scr'", [v_db_layerset.xid]);
+			let v_db_layer = await db.query_first_async("select *, xstyle from xo_admin.layer where layerset_xid = $1::int and xtype = 'scr'", [v_db_layerset.xid]);
 
 			if (!v_db_layer) {
 				// create the scratch layer if necessary
@@ -122,7 +113,7 @@ export abstract class user {
 				}
 
 				// add entry in layer table
-				let v_result = await db.query_async('insert into xo_admin.layer (layerset_id,xtype,xname,table_name, dts_created, dts_updated) values ($1::int, $2, $3, $3, current_timestamp, current_timestamp) returning xid',
+				let v_result = await db.query_async('insert into xo_admin.layer (layerset_xid,xtype,xname,table_name, dts_created, dts_updated) values ($1::int, $2, $3, $3, current_timestamp, current_timestamp) returning xid',
 					[v_db_layerset.xid, 'scr', 'scratch'], v_client);
 
 				let v_db_row = db.get_first_row(v_result);
@@ -131,11 +122,11 @@ export abstract class user {
 
 				await db.transaction_commit_async(v_client);
 
-				v_db_layer = await db.query_first_async("select * from xo_admin.layer where layerset_id = $1::int and xtype = 'scr'", [v_db_layerset.xid]);
+				v_db_layer = await db.query_first_async("select * from xo_admin.layer where layerset_xid = $1::int and xtype = 'scr'", [v_db_layerset.xid]);
 			}
 
 			let v_db_layersets = await layerset.get_layersets_raw_async(p_req.auth);
-			let v_layersets: xobject_type[] = v_db_layersets.map(p_db_layerset => ({
+			let v_layersets: xobject[] = v_db_layersets.map(p_db_layerset => ({
 				xid: p_db_layerset.xid,
 				xtype: p_db_layerset.xtype,
 				xname: p_db_layerset.xname,
@@ -143,9 +134,9 @@ export abstract class user {
 			}));
 
 			let v_response: user_context_type = {
-				user_id: p_req.auth.user_id,
-				default_layerset_id: v_db_layerset.xid,
-				scratch_layer_id: v_db_layer.xid,
+				user_xid: p_req.auth.user_xid,
+				default_layerset_xid: v_db_layerset.xid,
+				scratch_layer_xid: v_db_layer.xid,
 				layersets: v_layersets
 			};
 
@@ -161,10 +152,10 @@ export abstract class user {
 
 		try {
 
-			let v_layerset = await db.simple_row_async('xo_admin.layerset', 'xid', p_req.body.layerset_id, 'int');
+			let v_layerset = await db.simple_row_async('xo_admin.layerset', 'xid', p_req.body.layerset_xid, 'int');
 
 			if (!v_layerset) {
-				return fail(`invalid layerset: ${p_req.body.layerset_id}`);
+				return fail(`invalid layerset: ${p_req.body.layerset_xid}`);
 			}
 
 			if (!valid_postgres_identifier(p_req.body.layer_name)) {
@@ -181,7 +172,7 @@ export abstract class user {
 				return fail(`problem creating layer table: ${v_layerset.schema}.${p_req.body.layer_name}`);
 			}
 
-			let v_sql = `insert into xo_admin.layer( xtype, xname, table_name, layerset_id, dts_created, dts_updated ) values ( $1::text, $2::text, $2::text, $3::int, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP  ) `;
+			let v_sql = `insert into xo_admin.layer( xtype, xname, table_name, layerset_xid, dts_created, dts_updated ) values ( $1::text, $2::text, $2::text, $3::int, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP  ) `;
 			await db.query_async(v_sql, ['layer', p_req.body.layer_name, v_layerset.xid]);
 
 			return success();
@@ -196,7 +187,7 @@ export abstract class user {
 
 		try {
 
-			let v_layerset = await db.get_default_user_layerset(p_req.auth.user_id);
+			let v_layerset = await db.get_default_user_layerset(p_req.auth.user_xid);
 
 			if (v_layerset) {
 				let v_layers = await db.get_layerset_layers(v_layerset.xid);
@@ -218,10 +209,10 @@ export abstract class user {
 	static async get_async(p_req, p_res) {
 		try {
 
-			let v_layerset_id = p_req.params.layerset_id;
+			let v_layerset_xid = p_req.params.layerset_xid;
 
-			let v_result = await db.query_async(`select xid,xtype,xname,ST_AsGeoJSON(xgeo)::json as xgeo, table_name, layerset_id, dts_created, dts_updated from xo_admin.layer where layerset_id = $1`,
-				[v_layerset_id]);
+			let v_result = await db.query_async(`select xid,xtype,xname,ST_AsGeoJSON(xgeo)::json as xgeo, table_name, layerset_xid, dts_created, dts_updated from xo_admin.layer where layerset_xid = $1`,
+				[v_layerset_xid]);
 
 			let v_rows = db.get_rows(v_result);
 

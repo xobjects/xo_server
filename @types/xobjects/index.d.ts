@@ -1,9 +1,9 @@
 export type auth_type = {
 	user: string,
-	user_id: string
+	user_xid: string
 };
 
-export type xobject_type = {
+export type xobject = {
 	xtype: string,
 	xid: number,
 	xname: string,

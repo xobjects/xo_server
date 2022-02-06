@@ -1,20 +1,16 @@
-import shortid from 'shortid';
-
+import { OverpassQuery } from 'overpass.js';
 import fastify from 'fastify';
 import fastify_compress from 'fastify-compress';
 import fastify_static from 'fastify-static';
-import fastify_cors from 'fastify-cors';
-import fastify_ws from 'fastify-ws';
 import fastify_plugin from 'fastify-plugin';
 
 import fs from 'fs';
-import linebyline from 'linebyline';
 
 import pg from 'pg';
-import path, { basename } from 'path';
+import path from 'path';
 
 import { xo } from './xo';
-import { layer } from './layer';
+import layer from './layer';
 import { layerset } from './layerset';
 import { bookmark } from './bookmark';
 import { user } from './user';
@@ -25,17 +21,19 @@ import db from './db';
 //import { geocode, geocode2_async } from './geocode';
 
 import { db_base } from './db_base';
-import { Server } from 'http';
 
 import { ws_server } from './ws_server';
-import { bcrypt_test_async } from './security';
-import { layer_row, ws_packet_type } from './types';
+import { layer_row, ws_context, ws_packet_type } from './types';
 
-import * as model from './oauth2_model';
-import { app_data } from './app_data';
+import app from './app';
 import geocode from './geocode';
-
-//import cacheControl from './cacheControl';
+import { delay_async, safe_no_await, ws_packet_return } from './utils';
+import child_process, { ChildProcess } from 'child_process';
+import { draw_maplayer } from './draw_maplayer';
+import { maplayer } from './maplayer';
+import { composer } from './composer';
+import { isConstructorDeclaration } from 'typescript';
+import overpass from './overpass';
 
 function tick() {
 	let v_t = process.hrtime();
@@ -268,17 +266,15 @@ function xcite2_test() {
 
 }
 
-(async function () {
-
+async function child_process_async() {
 	/*
 	let v_path = '/Users/gkelly/dev/datasets/DistrictOfColumbia.geojson';
 	lines(v_path);
 	return;
-	*/
 
 	xcite2_test();
-
 	bcrypt_test_async();
+	*/
 
 	const v_family = new family_db();
 	//let v_result = await v_family.query_async('select * from names');
@@ -298,7 +294,7 @@ function xcite2_test() {
 
 	console.log(`xobject.net server - ${new Date().toLocaleString()}`);
 
-	let v_app = fastify({
+	let v_listener = fastify({
 		//		https: {
 		//key: fs.readFileSync(path.join(__dirname, '../localhost.key')),
 		//cert: fs.readFileSync(path.join(__dirname, '../localhost.crt'))
@@ -307,15 +303,13 @@ function xcite2_test() {
 		logger: false
 	});
 
-	const v_ws_server = new ws_server(v_app.server);
-
-	app_data.ws_server = v_ws_server;
+	app.ws_server = new ws_server(v_listener.server);
 
 	//v_app.decorateRequest('auth', {});
 
-	v_app.register(fastify_compress, { threshold: 0 });
+	v_listener.register(fastify_compress, { threshold: 0 });
 	//v_app.register(fastifyStatic, { root: path.join(__dirname, '../web'), });
-	v_app.register(fastifyCors, {});
+	v_listener.register(fastifyCors, {});
 
 	let v_middle_setup = fastify_plugin(function (p_fastify, p_options, p_next) {
 
@@ -333,10 +327,10 @@ function xcite2_test() {
 
 	let v_user_gkelly_auth = {
 		user: 'gkelly',
-		user_id: '82dde3a8-024c-4437-aa48-a8bc95110e36'
+		user_xid: '82dde3a8-024c-4437-aa48-a8bc95110e36'
 	}
 
-	v_app.addHook('preHandler', (p_req, p_res, p_done) => {
+	v_listener.addHook('preHandler', (p_req, p_res, p_done) => {
 		const v_auth = p_req.headers.authorization;
 
 		if (v_auth) {
@@ -385,10 +379,6 @@ function xcite2_test() {
 	});
 	*/
 
-	v_app.register(xo.routes, { prefix: '/xo' });
-	v_app.register(layer.routes, { prefix: '/xo' });
-	v_app.register(layerset.routes, { prefix: '/xo' });
-	v_app.register(user.routes, { prefix: '/xo' });
 	//v_app.register(geocode.routes, { prefix: '/xo' });
 
 	//v_app.register(xAuth, { prefix: 'xauth' });
@@ -396,7 +386,7 @@ function xcite2_test() {
 
 	console.log(`__dirname = ${__dirname}`);
 
-	v_app.register(fastify_static, {
+	v_listener.register(fastify_static, {
 		root: path.join(__dirname, 'images'),
 		prefix: '/images/'
 	});
@@ -425,37 +415,213 @@ function xcite2_test() {
 		//p_l.on('line', p_line => yield p_line);
 	});
 
-	v_app.get('/geojson', async (p_req, p_res) => {
-
-		let v_path = '/Users/gkelly/dev/datasets/NewYork.geojson';
-
-
-		//console.log(v_l);
+	v_listener.get('/access_token', async (p_req, p_res) => {
+		const v_access_token = await app.get_access_token_async();
+		p_res.status(200).type('application/json').send({ access_token: v_access_token });
 	});
 
 	//ws_server.http_server.on('request', p_tq => {
 	//debugger;
 	//});//v_app); // express will use same server
 
-	v_ws_server.add_handler('authorize', authorize_async);
-	v_ws_server.add_handler('ws-test', ws_test_async);
-	v_ws_server.add_handler('get-user-context', get_user_context_async);
-	v_ws_server.add_handler('get-layersets', get_layersets_async);
-	v_ws_server.add_handler('get-layers', get_layers_async);
-	v_ws_server.add_handler('get-layer-features', get_layer_features_async);
+	app.ws_server.add_handler('authorize', authorize_async);
+	app.ws_server.add_handler('ws-test', ws_test_async);
+	app.ws_server.add_handler('get-user-context', get_user_context_async);
+	app.ws_server.add_handler('get-layersets', get_layersets_async);
+	app.ws_server.add_handler('get-layer-features', get_layer_features_async);
+
+	layer.add_handlers();
+	overpass.add_handlers();
+
+	app.ws_server.add_handler('get-test-list', async p_ws_packet => {
+		let v_query = await db.query_async('select xid, xtype,xname,to_json(xgeo) geo from gk1.fl1');
+		let v_list = v_query.rows;
+		return ws_packet_return(p_ws_packet, true, v_list);
+	});
 
 	geocode.add_handlers();
 	bookmark.add_handlers();
 
-	await v_app.listen(8081);
+	await v_listener.listen(8081);
 
-}());
+}
 
-async function authorize_async(p_ws_packet: ws_packet_type, p_context: any): Promise<ws_packet_type> {
+function test() {
+
+	const query = new OverpassQuery()
+		.setFormat('json')
+		.setTimeout(30)
+		.addElement({
+			type: 'node',
+			tags: [{ amenity: 'restaurant' }],
+			bbox: [47.48047027491862, 19.039797484874725, 47.51331674014172, 19.07404761761427]
+		});
+
+	type dancer = {
+		type_of_dance: string,
+		dance();
+	};
+
+	let dancer = composer<dancer>({
+
+		type_of_dance: '',
+
+		dance() {
+			console.log('time to dance - ', this.type_of_dance);
+		},
+
+		[composer.init](p_config) {
+			this.type_of_dance = p_config.type_of_dance;
+		}
+
+	});
+
+	type father = dancer & {
+		spouse: string,
+		support_family()
+	};
+
+	let father = composer({
+
+		spouse: '',
+
+		support_family() {
+			console.log('father', 'support family');
+		},
+
+		[composer.init](p_config: { spouse: string }) {
+			this.spouse = p_config.spouse;
+			dancer[composer.init].call(this, { type_of_dance: 'tonga' });
+		}
+
+	}, dancer);
+
+	interface christian {
+		church: string,
+		pray(),
+		go_to_church(),
+	}
+
+	let christian = composer<christian>({
+
+		church: '',
+
+		pray() {
+			console.log('christian', 'pray');
+		},
+
+		go_to_church() {
+			console.log('christian', 'go to church at ' + this.church);
+		},
+
+		[composer.init](p_config: { church: string }) {
+			this.church = p_config.church;
+		}
+
+	});
+
+	//let v_christian = christian({ church: 'immanuel' });
+
+	type person = christian & father & {
+		name: string,
+		eat()
+	}
+
+	type person_config = {
+		name?: string,
+		church?: string,
+		spouse?: string,
+		type_of_dance?: string
+	}
+
+	let person = composer<person, person_config>({
+
+		name: '',
+
+		eat() {
+			console.log('person', 'time to eat');
+		},
+
+		//[composer.init](p_config: person) {
+		[composer.init](p_config: person_config) {
+			this.name = p_config.name;
+			christian[composer.init].call(this, p_config);
+			father[composer.init].call(this, p_config);
+		}
+
+	}, christian, father);
+
+	let v_person = person({ name: 'gkelly', spouse: 'elizabeth', church: 'berean' });
+
+	console.log('** person', v_person.name);
+	console.log('** church', v_person.church);
+
+	debugger;
+}
+
+//test();
+
+(async () => {
+
+	const v_child_process_marker = '--xo-child--';
+	const v_is_child_process = process.argv[2] === v_child_process_marker;
+
+	if (v_is_child_process) {
+
+		safe_no_await(child_process_async());
+
+	} else {
+
+		let v_child_process: ChildProcess;
+
+		async function on_child_exit_async() {
+			console.log('child has exited - restarting in 2 seconds');
+			await delay_async(2000);
+			create_child();
+		}
+
+		function create_child() {
+			console.log('creating child process');
+			v_child_process = child_process.fork(process.argv[1], [v_child_process_marker]);
+			v_child_process.once('exit', on_child_exit_async);
+		}
+
+		console.log(`parent process - ${process.pid}`);
+
+		create_child();
+	}
+
+})();
+
+async function authorize_async(p_ws_packet: ws_packet_type, p_ws_context: ws_context): Promise<ws_packet_type> {
 	try {
 
-		p_context.authorized = true;
-		return { ...p_ws_packet, successful: true, data: 'you are now authorized' };
+		const v_params: {
+			access_token: string
+		} = p_ws_packet.data;
+
+		if (typeof v_params.access_token !== 'string') {
+			throw 'invalid access token';
+		}
+
+		const v_user_xid = await app.validate_access_token_async(v_params.access_token);
+
+		if (v_user_xid) {
+
+			let v_query = await db.query_async('select owner_xid from xo.user where xid=$1::uuid', [v_user_xid]);
+
+			if (v_query.rowCount === 1) {
+				p_ws_context.user_xid = v_user_xid;
+				p_ws_context.owner_xid = v_query.rows[0].owner_xid;
+				p_ws_context.authorized = true;
+			}
+
+			return { ...p_ws_packet, successful: true, data: 'authorized' };
+
+		} else {
+			return { ...p_ws_packet, successful: false, data: 'not authorized' };
+		}
+
 
 	} catch (p_error) {
 
@@ -478,20 +644,7 @@ async function get_layersets_async(p_ws_packet: ws_packet_type): Promise<ws_pack
 	}
 }
 
-async function get_layers_async(p_ws_packet: ws_packet_type): Promise<ws_packet_type> {
 
-	try {
-		const v_xid = p_ws_packet.data.xid;
-
-		const v_result = await db.query_async('select * from xo.layer where layerset_id = $1 order by xname', [v_xid]);
-		return { ...p_ws_packet, successful: true, data: v_result.rows };
-
-	} catch (p_error) {
-
-		return { ...p_ws_packet, successful: false, data: p_error };
-
-	}
-}
 
 type get_layer_features_async_type = {
 	xid: number,

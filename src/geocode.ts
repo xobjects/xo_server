@@ -1,12 +1,9 @@
 import { http_async } from './http';
-import { success, fail, delay_async } from './utils';
+import { success } from './utils';
 import { decode as flexible_polyline_decode } from './flexible_polyline';
-import { Http2ServerRequest } from 'http2';
-import { featureCollection, FeatureCollection, Geometry } from '@turf/helpers';
-import pointGrid from '@turf/point-grid';
+import { FeatureCollection, Geometry } from '@turf/helpers';
 import db from './db';
-import { ws_server } from './ws_server';
-import { app_data } from './app_data';
+import app from './app';
 import { ws_packet_type } from './types';
 
 /*
@@ -27,7 +24,7 @@ const _openrouteservice_auth = '5b3ce3597851110001cf624827e9213ff2de4275a6a6152f
 
 function add_handlers() {
 
-	app_data.ws_server.add_handler('geocode', ws_geocode_async);
+	app.ws_server.add_handler('geocode', ws_geocode_async);
 
 }
 
@@ -57,6 +54,19 @@ export async function geocode2_async(p_address: string): Promise<FeatureCollecti
 
 		for (const v_feature of v_response.data.features) {
 			v_feature.geometry = await db.transform_async(v_feature.geometry as Geometry, 4326, 3857);
+
+			/*
+			if (v_feature.bbox) {
+				const v_geo1 = await db.transform_async(point([v_feature.bbox[0], v_feature.bbox[1]]), 4326, 3857);
+				const v_geo2 = await db.transform_async(point([v_feature.bbox[2], v_feature.bbox[3]]), 4326, 3857);
+
+				const v_pos1 = v_geo1.coordinates as Position;
+				const v_pos2 = v_geo2.coordinates as Position;
+
+				v_feature.bbox = [v_pos1[0], v_pos1[1], v_pos2[0], v_pos2[1]];
+			}
+			*/
+
 		}
 
 		return v_response.data;

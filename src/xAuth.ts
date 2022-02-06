@@ -1,8 +1,6 @@
 //import { v4 as uuid } from 'uuid';
 import db from './db';
 
-import cacheControl from './cacheControl';
-
 export default async function (p_fastify, p_options, p_done) {
 	p_fastify.get('/james', james);
 	p_fastify.get('/authorize', (p_req, p_res) => p_res.redirect('/xologin.html'));
@@ -29,8 +27,6 @@ async function authenticate(p_req, p_res) {
 			returning xid`,
 		[v_xauthid, v_xuser.xid, null, 'y']);
 
-	cacheControl.emit('update', 'called from xAuth');
-
 	if (v_xuser.password === v_password) {
 		let v_html = `<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html><head><title>code=${v_xauthid}</title></head><script>CODE='${v_xauthid}';setInterval(function() {{ parent.postMessage('CODE=' + CODE, '*'); }},200);</script><body style='visibility:hidden'>Successful login<br>code=${v_xauthid}</body></html>`;
 		p_res
@@ -47,14 +43,14 @@ async function token(p_req, p_res) {
 
 	if (p_req.body.grant_type === 'authorization_code') {
 
-        /* returns {
-            access_token,
-            token_type : 'Bearer',
-            expires_in,
-            refresh_token,
-            scope,
-        }
-        */
+		/* returns {
+			access_token,
+			token_type : 'Bearer',
+			expires_in,
+			refresh_token,
+			scope,
+		}
+		*/
 
 		let v_client = await db.client_async();
 
@@ -106,14 +102,14 @@ async function token(p_req, p_res) {
 
 	} else if (p_req.body.grant_type === 'refresh_token') {
 
-        /* returns {
-            access_token,
-            token_type : 'Bearer',
-            expires_in,
-            refresh_token,
-            scope,
-        }
-        */
+		/* returns {
+			access_token,
+			token_type : 'Bearer',
+			expires_in,
+			refresh_token,
+			scope,
+		}
+		*/
 
 		let v_client = await db.client_async();
 

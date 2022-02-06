@@ -142,3 +142,14 @@ Authorization: 5b3ce3597851110001cf624827e9213ff2de4275a6a6152f7fb645f0
 Content-Type: application/json
 
 {"request":"pois","geometry":{"bbox":[[8.8034,53.0756],[8.7834,53.0456]],"geojson":{"type":"Point","coordinates":[8.8034,53.0756]},"buffer":200}}
+
+###
+GET http://overpass-api.de/api/interpreter?data=[out:json][timeout:30];(way["building"](43.07807924321489, -75.337379059068,43.106975424409185, -75.2763059184843););out body;>;out skel qt;
+###
+
+GET http://overpass-api.de/api/interpreter?data=[out:json][timeout:30];node(43.07807924321489, -75.337379059068,43.106975424409185, -75.2763059184843);out meta;
+
+
+###
+GET https://api.openrouteservice.org/geocode/search?api_key=5b3ce3597851110001cf624827e9213ff2de4275a6a6152f7fb645f0&text=100 main,ut
+###

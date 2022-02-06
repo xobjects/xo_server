@@ -3,13 +3,46 @@ import { timingSafeEqual } from 'crypto';
 
 import { Pool } from 'pg';
 import { db_base } from './db_base';
-import { Geometry } from '@turf/helpers';
+import { Feature, Geometry } from '@turf/helpers';
+import { layerset, user } from './types';
 
 class db extends db_base {
 
 	constructor() {
 		super('xobjects');
 	}
+
+
+	async get_user_async(p_user_xid: string) {
+		let v_query = await this.query_async<user>('select * from xo.user where xid=$1::uuid', [p_user_xid]);
+		return v_query.rowCount === 1 ? v_query.rows[0] : undefined
+	}
+
+	async get_layersets_async(p_owner_xid: string) {
+		let v_query = await this.query_async<layerset>('select * from xo.layerset where owner_xid=$1::uuid', [p_owner_xid]);
+		return v_query.rows;
+	}
+
+	async get_layerset_async(p_owner_xid: string, p_layerset_xid: number) {
+		let v_query = await this.query_async<layerset>('select * from xo.layerset where owner_xid=$1::uuid and xid=$2::int', [p_owner_xid, p_layerset_xid]);
+		return v_query.rowCount === 1 ? v_query.rows[0] : undefined;
+	}
+
+	async create_layer_table_async(p_schema_name: string, p_table_name) {
+		return this.query_async(`create table ${p_schema_name}.${p_table_name} (primary key(xid)) inherits (xo.layer_base)`);
+	}
+
+	async table_exists_async(p_schema_name: string, p_table_name: string) {
+		const v_query = await this.query_async('select count(table_name) count from information_schema.tables where table_schema=$1::text and table_name=$2::text', [p_schema_name, p_table_name]);
+		return v_query.rows?.[0]?.count === 1;
+	}
+
+	async schema_exists_async(p_schema_name: string) {
+		const v_query = await this.query_async('select count(schema_name) count from information_schema.schemata where schema_name = $1::text', [p_schema_name]);
+		return v_query.rows?.[0]?.count === 1;
+	}
+
+	///////////////////////
 
 	async xcompany_async(p_field, p_value, p_type, p_client = null) {
 		let v_result = await this.query_async(`select * from xadmin.xcompany where ${p_field} = $1::${p_type}`, [p_value], p_client);
@@ -152,14 +185,14 @@ class db extends db_base {
 		console.log(`features: ${v_fc.features.length} `);
 	}
 
-	async get_default_user_layerset(p_user_id): Promise<any> {
-		let v_sql = 'select * from xo_admin.layerset where user_id = $1::uuid and is_default';
-		let v_result = await this._pool.query(v_sql, [p_user_id]);
+	async get_default_user_layerset(p_user_xid): Promise<any> {
+		let v_sql = 'select * from xo_admin.layerset where user_xid = $1::uuid and is_default';
+		let v_result = await this._pool.query(v_sql, [p_user_xid]);
 		return this.get_first_row(v_result);
 	}
 
-	async get_layerset_layers(p_layerset_id: number): Promise<any[]> {
-		let v_result = await this.query_async("select * from xo_admin.layer where layerset_id = $1::int", [p_layerset_id]);
+	async get_layerset_layers(p_layerset_xid: number): Promise<any[]> {
+		let v_result = await this.query_async("select * from xo_admin.layer where layerset_xid = $1::int", [p_layerset_xid]);
 		return this.get_rows(v_result);
 	}
 
@@ -227,9 +260,10 @@ class db extends db_base {
 		return this.query_first_async('rollback', null, p_client);
 	}
 
-	async transform_async(p_geo: Geometry, p_from: number = 4326, p_to: number = 3857): Promise<Geometry> {
+	async transform_async(p_geo: Geometry | Feature, p_from: number = 4326, p_to: number = 3857): Promise<Geometry> {
+		const v_geo = p_geo.type === 'Feature' ? (p_geo as Feature).geometry : p_geo;
 		const v_sql = `SELECT row_to_json(t) json from ( select ST_Transform(ST_SetSRID( ST_GeomFromGeoJSON($1::json)::geometry, $2::int ),$3::int) geo) t`;
-		const v_result = await this.query_async(v_sql, [p_geo, p_from, p_to]);
+		const v_result = await this.query_async(v_sql, [v_geo, p_from, p_to]);
 		return v_result?.rows?.[0]?.json?.geo;
 	}
 
