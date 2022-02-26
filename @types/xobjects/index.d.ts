@@ -7,6 +7,7 @@ export type xobject = {
 	xtype: string,
 	xid: number,
 	xname: string,
+	xstyle?: {},
 	xgeo?: any,
 	[other: string]: any
 };

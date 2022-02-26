@@ -124,6 +124,8 @@ interface layerset {
 	layers: layer[]
 }
 
+let count = 1;
+
 async function layer_list_async(p_ws_packet: ws_packet_type, p_ws_context: ws_context): Promise<ws_packet_type> {
 
 	try {
@@ -132,12 +134,6 @@ async function layer_list_async(p_ws_packet: ws_packet_type, p_ws_context: ws_co
 			xid: number
 		} = p_ws_packet.data;
 
-		//if (typeof v_params?.xid != 'number') {
-		//throw 'invalid xid';
-		//}
-
-		const v_user_xid = '82DDE3A8-024C-4437-AA48-A8BC95110E36';
-
 		let v_query = await db.query_async('select * from xo.layerset where owner_xid=$1::uuid', [p_ws_context.owner_xid]);
 		let v_layerset_list = v_query.rows.map(x => ({
 			xid: x.xid,
@@ -145,7 +141,7 @@ async function layer_list_async(p_ws_packet: ws_packet_type, p_ws_context: ws_co
 			layers: []
 		}));
 
-		v_query = await db.query_async(`select l.xid, l.xname, ls.xid layerset_xid from xo.layer l 
+		v_query = await db.query_async(`select l.xid, l.xname, l.xstyle, ls.xid layerset_xid from xo.layer l 
 			inner join xo.layerset ls on ls.xid = l.layerset_xid and ls.owner_xid=$1::uuid`, [p_ws_context.owner_xid]);
 
 		v_query.rows.forEach(p_layer => {
@@ -153,10 +149,25 @@ async function layer_list_async(p_ws_packet: ws_packet_type, p_ws_context: ws_co
 			if (v_layerset) {
 				v_layerset.layers.push({
 					xid: p_layer.xid,
-					xname: p_layer.xname
+					xname: p_layer.xname,
+					xstyle: p_layer.xstyle
 				});
 			}
 		});
+
+		/*
+		++count;
+
+		if (count > 4) {
+			let v_gk1 = v_layerset_list.find(x => x.xname === 'gk1');
+
+			v_gk1.xname = v_gk1.xname + ' - ' + count;
+
+			let v_fl1 = v_gk1.layers.find(x => x.xname.match(/^fl1/));
+			v_fl1.xname = v_fl1.xname + ' - ' + count;
+			console.log('got here');
+		}
+		*/
 
 		return { ...p_ws_packet, successful: true, data: v_layerset_list };
 
@@ -189,7 +200,7 @@ async function layer_data_async(p_ws_packet: ws_packet_type): Promise<ws_packet_
 		const v_schema_table = `${v_layer_db.schema_name}.${v_layer_db.table_name}`;
 
 		v_result = await db.query_async(`
-			select xid, xtype, xname, to_json(xgeo) xgeo from ${v_schema_table} 
+			select xid, xtype, xname, to_json(xgeo) xgeo, xstyle from ${v_schema_table} 
 		` );
 
 		return { ...p_ws_packet, successful: true, data: v_result.rows };
@@ -202,7 +213,7 @@ async function layer_data_async(p_ws_packet: ws_packet_type): Promise<ws_packet_
 	}
 }
 
-async function layer_update_async(p_ws_packet: ws_packet_type): Promise<ws_packet_type> {
+async function layer_update_async(p_ws_packet: ws_packet_type, p_ws_context: ws_context): Promise<ws_packet_type> {
 
 	try {
 
@@ -219,8 +230,6 @@ async function layer_update_async(p_ws_packet: ws_packet_type): Promise<ws_packe
 			throw 'invalid xobject';
 		}
 
-		const v_user_xid = '82DDE3A8-024C-4437-AA48-A8BC95110E36';
-
 		let v_result = await db.query_async(`
 			select l.table_name, ls.schema_name 
 			from xo.layer l inner join layerset ls on ls.xid = l.layerset_xid
@@ -231,14 +240,17 @@ async function layer_update_async(p_ws_packet: ws_packet_type): Promise<ws_packe
 		const v_schema_table = `${v_layer_db.schema_name}.${v_layer_db.table_name}`;
 
 		if (typeof v_params.xobject.xid !== 'undefined') {
-			v_result = await db.query_async(`update ${v_schema_table} set xgeo = ST_GeomFromGeoJSON($2::json)::geometry where xid=$1::int`, [v_params.xobject.xid, v_params.xobject.xgeo]);
+			const v_qp = [v_params.xobject.xid, v_params.xobject.xgeo, v_params.xobject.xstyle];
+			v_result = await db.query_async(`update ${v_schema_table} set xgeo = ST_GeomFromGeoJSON($2::json)::geometry, xstyle=$3::jsonb where xid=$1::int`, v_qp);
 			return { ...p_ws_packet, successful: true, data: { rows_updated: v_result.rowCount } };
+
 		} else {
+
 			v_result = await db.query_async(`insert into ${v_schema_table} (xgeo,xname) values ( ST_GeomFromGeoJSON($1::json)::geometry, $2::text) returning xid`, [v_params.xobject.xgeo, 'new object']);
 			const v_xid = v_result.rows?.[0].xid;
 			return { ...p_ws_packet, successful: true, data: { id: v_result.rowCount } };
-		}
 
+		}
 
 	} catch (p_error) {
 
